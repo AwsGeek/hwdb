@@ -1,0 +1,17 @@
+HWDB
+Python 
+PIP
+Flask
+Bootstrap + CSS + JS
+Jquery
+forms
+Flask Login
+Google authenticate
+Users
+use these techniques more later on
+queries
+listing
+paginating diy
+summarizing, total counts, pages
+searching
+sorting

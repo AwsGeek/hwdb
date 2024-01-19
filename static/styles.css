@@ -1,0 +1,31 @@
+* {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+table.sortable td {
+    white-space: nowrap;
+}
+
+table.sortable td:last-child { 
+    width: 100% 
+}
+
+th.sortable {
+    cursor:pointer;
+}
+
+th.sorted[sort-direction="desc"] span::after {
+    content: " ▼";
+}
+
+th.sorted[sort-direction="asc"] span::after {
+    content: " ▲";
+}
+

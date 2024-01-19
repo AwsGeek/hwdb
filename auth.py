@@ -1,19 +1,12 @@
 import os
 import json
-from flask import Blueprint, render_template, Flask, redirect, request, url_for
-
-from flask_login import (
-    LoginManager,
-    current_user,
-    login_required,
-    login_user,
-    logout_user,
-)
-from . import db
-from .models import User
-
-from oauthlib.oauth2 import WebApplicationClient
 import requests
+
+from flask import Blueprint, Flask, redirect, request, url_for
+from flask_login import LoginManager, login_required, login_user, logout_user
+from oauthlib.oauth2 import WebApplicationClient
+
+from .user import User
 
 auth = Blueprint('auth', __name__)
 
@@ -26,7 +19,6 @@ GOOGLE_DISCOVERY_URL = (
 
 # OAuth 2 client setup
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
-
 
 @auth.route('/login')
 def login():
@@ -48,7 +40,6 @@ def login():
 def callback():
     # Get authorization code Google sent back to you
     code = request.args.get("code")
-
     # Find out what URL to hit to get tokens that allow you to ask for
     # things on behalf of a user
     google_provider_cfg = get_google_provider_cfg()
@@ -89,27 +80,26 @@ def callback():
     else:
         return "User email not available or not verified by Google.", 400
 
-    user = User.query.filter_by(email=users_email).first() # if this returns a user, then the email already exists in database
-    if not user: # Doesn't exist? Add to database
-        
-        user = User(email=users_email, name=users_name, profile_pic=users_picture)
+    user = User.get_by_email(users_email) # if this returns a user, then the email already exists in database
+    if not user: # Doesn't exist? Add to database        
+        user = User.create(email=users_email, name=users_name, image=users_picture, role='member')
 
-        db.session.add(user)
-        db.session.commit()
-        db.session.refresh(user)
+    if not user.banned:
+        print(user)
+        User.update_last_login(user.id)
 
-    # Begin user session by logging the user in
-    login_user(user)
+        # Begin user session by logging the user in
+        login_user(user)
 
     # Send user back to homepage
-    return redirect(url_for("main.index"))
+    return redirect(url_for("users"))
 
 
 @auth.route("/logout")
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for("main.index"))
+    return redirect(url_for("auth.login"))
 
 
 def get_google_provider_cfg():
