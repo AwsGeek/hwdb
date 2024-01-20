@@ -9,14 +9,6 @@ a {
     color: inherit;
 }
 
-table.sortable td {
-    white-space: nowrap;
-}
-
-table.sortable td:last-child { 
-    width: 100% 
-}
-
 th.sortable {
     cursor:pointer;
 }

@@ -92,7 +92,7 @@ def callback():
         login_user(user)
 
     # Send user back to homepage
-    return redirect(url_for("users"))
+    return redirect(url_for("users.list"))
 
 
 @auth.route("/logout")

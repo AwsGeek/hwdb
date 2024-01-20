@@ -39,7 +39,7 @@ class User(dict, UserMixin):
     def get(id):
         db = get_db()
         with db.cursor() as cur:
-            cur.execute("SELECT * FROM user WHERE id = %s", (id,))
+            cur.execute("SELECT * FROM user WHERE id = %s", (id))
             row = cur.fetchone()
             if not row:
                 return None

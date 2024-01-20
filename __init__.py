@@ -3,6 +3,7 @@ import os
 from flask import Flask, render_template
 from flask_login import LoginManager, login_required
 from dotenv import load_dotenv
+from flask_wtf import CSRFProtect 
 
 from .user import User
 
@@ -15,6 +16,7 @@ def create_app(test_config=None):
         SECRET_KEY='dev',
         DATABASE=os.path.join(app.instance_path, 'hwdb.sqlite'),
     )
+    csrf = CSRFProtect(app) 
 
     if test_config is None:
         # load the instance config, if it exists, when not testing
@@ -48,15 +50,13 @@ def create_app(test_config=None):
     from .api import api as api_blueprint
     app.register_blueprint(api_blueprint)
 
+    from .users import users as users_blueprint
+    app.register_blueprint(users_blueprint)
+
     # a simple page that says hello
     @app.route('/')
     @login_required
     def home():
         return render_template('base.html')
-
-    @app.route('/users', methods=['GET']) 
-    @login_required
-    def users():
-        return render_template("users.html")    
 
     return app

@@ -7,6 +7,20 @@ from .user import User
 
 api = Blueprint('api', __name__)
 
+@api.route('/api/users/<int:user_id>', methods=['GET','PUT']) 
+@login_required
+def user(user_id):
+    User.update_last_activity(current_user.id)
+
+    if request.method == 'GET':
+        return User.get(user_id)
+    elif request.method == "PUT":
+        return User.get(user_id)
+
+
+
+
+
 @api.route('/api/users', methods=['GET']) 
 @login_required
 def users():

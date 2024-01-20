@@ -22,54 +22,85 @@ function updateTable() {
 
             $('table.users tbody').find('tr.user').remove()
             $.each(data.user_list, function (index, value) {
-            var tr = '<tr class="user">' +
-                    '<td>' + value.id + '</td>' +
-                    '<td><img src="' + value.image + '" class="object-fit-cover rounded-circle" width="26" height="26"></td>' +
-                    '<td>' + value.name + '</td>' +
-                    '<td>' + value.email + '</td>' + 
-                    '<td>' + value.active + '</td>' + 
-                    '<td>' + value.banned + '</td>' + 
-                    '<td>' + value.last_login + '</td>' + 
-                    '<td>' + value.last_activity + '</td>' + 
-                    '</tr>';
-            $('table.users tbody').append(tr)
+                var tr = '<tr class="user">' +
+                        '<td>' + value.id + '</td>' +
+                        '<td><img src="' + value.image + '" class="object-fit-cover rounded-circle" width="26" height="26"></td>' +
+                        '<td>' + value.name + '</td>' +
+                        '<td>' + value.email + '</td>' + 
+                        '<td>' + value.active + '</td>' + 
+                        '<td>' + value.banned + '</td>' + 
+                        '<td>' + value.last_login + '</td>' + 
+                        '<td>' + value.last_activity + '</td>' + 
+                        '<td><button type="button" class="btn btn-primary editUserOpen" data-user_id="' + value.id  + '">Edit</button></td>' + 
+                        '</tr>';
+                $('table.users tbody').append(tr)
             });
             $('ul.pagination').find('li').remove()
             if (data.total_pages) {
 
-            num_links = Math.min(Math.floor((data.total_pages*2-1)/2), 7)
-            num_links = Math.min(data.total_pages, 7)
+                num_links = Math.min(Math.floor((data.total_pages*2-1)/2), 7)
+                num_links = Math.min(data.total_pages, 7)
 
-            max_page = data.current_page+Math.floor(num_links/2)
-            min_page = data.current_page-Math.floor(num_links/2)
-            if (min_page < 1) {
-                max_page = num_links
-                min_page = 1
-            }
-
-            if (max_page > data.total_pages) {
-                min_page = Math.max(1, data.total_pages-num_links+1)
-                max_page = data.total_pages
-
-            }
-
-            $('ul.pagination').append('<li class="page-item"><a class="page-link" data-page="' + (Math.max(data.current_page-1, 1)) + '" href="javascript:void(0)">&lt;</a></li>')              
-            for (let idx = min_page; idx <= max_page; idx++) {
-                if (idx == data.current_page) {
-                $('ul.pagination').append('<li class="page-item active"><a class="page-link" data-page="' + idx + '" href="javascript:void(0)">' + idx + '</a></li>')              
-                } else {
-                $('ul.pagination').append('<li class="page-item"><a class="page-link" data-page="' + idx + '" href="javascript:void(0)">' + idx + '</a></li>')              
+                max_page = data.current_page+Math.floor(num_links/2)
+                min_page = data.current_page-Math.floor(num_links/2)
+                if (min_page < 1) {
+                    max_page = num_links
+                    min_page = 1
                 }
-            }
-            $('ul.pagination').append('<li class="page-item"><a class="page-link" data-page="' + (Math.min(data.current_page+1, data.total_pages)) + '" href="javascript:void(0)">&gt;</a></li>')               
-            $('ul.displaying').html('<span>Showing ' + data.user_list.length + ' of <strong>' + data.total_users + ' total users</strong></span>')
-            $('ul.dropdown button').text(page_size)
+
+                if (max_page > data.total_pages) {
+                    min_page = Math.max(1, data.total_pages-num_links+1)
+                    max_page = data.total_pages
+                }
+
+                $('ul.pagination').append('<li class="page-item"><a class="page-link" data-page="' + (Math.max(data.current_page-1, 1)) + '" href="javascript:void(0)">&lt;</a></li>')              
+                for (let idx = min_page; idx <= max_page; idx++) {
+                    if (idx == data.current_page) {
+                    $('ul.pagination').append('<li class="page-item active"><a class="page-link" data-page="' + idx + '" href="javascript:void(0)">' + idx + '</a></li>')              
+                    } else {
+                    $('ul.pagination').append('<li class="page-item"><a class="page-link" data-page="' + idx + '" href="javascript:void(0)">' + idx + '</a></li>')              
+                    }
+                }
+                $('ul.pagination').append('<li class="page-item"><a class="page-link" data-page="' + (Math.min(data.current_page+1, data.total_pages)) + '" href="javascript:void(0)">&gt;</a></li>')               
+                $('ul.displaying').html('<span>Showing ' + data.user_list.length + ' of <strong>' + data.total_users + ' total users</strong></span>')
+                $('ul.dropdown button').text(page_size)
 
             }
+
             $('a.page-link').on('click', function (event) {
-            page_number = $(this).attr("data-page");
-            updateTable()
+                page_number = $(this).attr("data-page");
+                updateTable()
             });
+            
+            $('button.editUserOpen').on('click',function(event) {
+                user_id = $(this).data("user_id");
+
+                var modal = $('#editUserModal')
+                $.ajax({
+                    type: "GET",
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    url: "/api/users/" + user_id,
+                    success: function(data){
+                        console.log(data)
+        
+                        modal.find('#user_id').val(data.id)
+                        modal.find('#image').attr("src", data.image)
+                        modal.find('#name').val(data.name)
+                        modal.find('#email').val(data.email)
+
+                        modal.modal('show');
+
+
+                    },
+                    error: function(errMsg) {
+                        console.log(errMsg);
+                        $('#exampleModal'). modal('hide')
+                    }
+                });       
+
+            });  
+            
         },
         error: function(errMsg) {
             console.log(errMsg);
@@ -78,6 +109,56 @@ function updateTable() {
     }
 
 $(document).ready(function(){
+
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", csrf_token);
+            }
+        }
+    });
+
+
+    $('button.editUserClose').on('click',function(event) {
+        modal = $('#editUserModal')
+        modal.find('#image').attr("src", "")
+        modal.find('#name').val("")
+        modal.find('#email').val("")
+
+        modal.modal('hide');
+    })
+
+    $('button#editUserSave').on('click',function(event) {
+        modal = $('#editUserModal')
+        id = modal.find('#user_id').val()
+        name = modal.find('#user_id').val()
+        email = modal.find('#email').val()
+        console.log(id,name,email)
+
+        $.ajax({
+            type: "PUT",
+            contentType: "application/json; charset=utf-8",
+            data: {id: id, name: name, email:email},
+            dataType: "json",
+            url: "/api/users/" + id,
+            success: function(data){
+                console.log(data)
+
+                modal.find('#image').attr("src", data.image)
+                modal.find('#name').val(data.name)
+                modal.find('#email').val(data.email)
+
+                modal.modal('show');
+
+
+            },
+            error: function(errMsg) {
+                console.log(errMsg);
+                $('#exampleModal'). modal('hide')
+            }
+        });       
+
+    });  
 
     $('th.sortable').on('click', function (event) {
         event.preventDefault();
@@ -99,7 +180,7 @@ $(document).ready(function(){
         sf = $('#search_phrase').val();
         
         if (sf == search_phrase) {
-        return
+            return
         }
 
         search_phrase = sf
@@ -111,7 +192,7 @@ $(document).ready(function(){
         sf = $('#search_phrase').val();
         
         if (sf == search_phrase) {
-        return
+            return
         }
 
         search_phrase = sf

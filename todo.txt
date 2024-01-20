@@ -8,10 +8,17 @@ forms
 Flask Login
 Google authenticate
 Users
+SQL injection
 use these techniques more later on
+ - check out Flask-RESTful 
+CSRF protection with Flask-WTF
+async
+ajax
 queries
 listing
 paginating diy
 summarizing, total counts, pages
 searching
 sorting
+editing
+modals or not
