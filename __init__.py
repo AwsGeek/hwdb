@@ -1,29 +1,27 @@
 import os
 
-from flask import Flask, render_template
+from flask import Flask
 from flask_login import LoginManager, login_required
-from dotenv import load_dotenv
-from flask_wtf import CSRFProtect 
-
 from .user import User
 
-load_dotenv()
 
 def create_app(test_config=None):
-    # create and configure the app
+    """Create and configure an instance of the Flask application."""
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
-        SECRET_KEY='dev',
-        DATABASE=os.path.join(app.instance_path, 'hwdb.sqlite'),
+        # a default secret that should be overridden by instance config
+        SECRET_KEY="dev",
+        # store the database in the instance folder
+        DATABASE=os.path.join(app.instance_path, "flaskr.sqlite"),
+        OAUTH1_PROVIDER_ENFORCE_SSL=False
     )
-    csrf = CSRFProtect(app) 
 
     if test_config is None:
         # load the instance config, if it exists, when not testing
-        app.config.from_pyfile('config.py', silent=True)
+        app.config.from_pyfile("config.py", silent=True)
     else:
         # load the test config if passed in
-        app.config.from_mapping(test_config)
+        app.config.update(test_config)
 
     # ensure the instance folder exists
     try:
@@ -31,7 +29,9 @@ def create_app(test_config=None):
     except OSError:
         pass
 
+    # register the database commands
     from . import db
+
     db.init_app(app)
 
     login_manager = LoginManager()
@@ -44,19 +44,26 @@ def create_app(test_config=None):
         return User.get(int(user_id))
 
     # blueprint for auth routes in our app
-    from .auth import auth as auth_blueprint
-    app.register_blueprint(auth_blueprint)
+    from . import auth
+    app.register_blueprint(auth.bp)
 
-    from .api import api as api_blueprint
-    app.register_blueprint(api_blueprint)
+    # apply the blueprints to the app
+    from . import casting
+    app.register_blueprint(casting.bp)
 
-    from .users import users as users_blueprint
-    app.register_blueprint(users_blueprint)
+    # apply the blueprints to the app
+    from . import store
+    app.register_blueprint(store.bp)
 
-    # a simple page that says hello
-    @app.route('/')
-    @login_required
-    def home():
-        return render_template('base.html')
+    # apply the blueprints to the app
+    from . import api
+    app.register_blueprint(api.bp)
+
+
+    # make url_for('index') == url_for('blog.index')
+    # in another app, you might define a separate main index here with
+    # app.route, while giving the blog blueprint a url_prefix, but for
+    # the tutorial the blog will be the main index
+    app.add_url_rule("/", endpoint="casting.index")
 
     return app

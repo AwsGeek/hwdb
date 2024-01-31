@@ -1,0 +1,504 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script>
+
+sort_column = "year"
+
+    function updateEditCastingIcon(input) {
+        if (input.files && input.files[0]) {
+
+            var reader = new FileReader();
+            reader.onload = function (e) { 
+                image = document.querySelector("#edit-casting-icon")
+                image.setAttribute("src",e.target.result);
+            }
+            reader.readAsDataURL(input.files[0]); 
+        }
+    }  
+    
+
+
+document.addEventListener("DOMContentLoaded", () => {
+
+
+    // Get the modal
+    var modal = document.getElementById("edit-casting-modal");
+    var button = document.getElementById("edit-casting-modal-submit");
+
+    var import_casting_modal = document.getElementById("import-casting-modal");
+    var import_casting_button = document.getElementById("import-casting-modal-submit");
+
+
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        } else if (event.target == import_casting_modal) {
+            import_casting_modal.style.display = "none";
+        }
+    }
+
+    document.getElementById("add-casting-button").onclick = function(event) {
+        
+        document.getElementById("add-casting-id").setAttribute("value", "")
+        document.getElementById("add-casting-code").setAttribute("value", "")
+        document.getElementById("add-casting-name").setAttribute("value", "")
+        document.getElementById("add-casting-icon").setAttribute("value", "")
+        
+        modal.style.display = "flex";
+    }
+
+    document.getElementById("import-casting-button").onclick = function(event) {
+        import_casting_modal.style.display = "flex";
+    }
+    
+    import_casting_button.onclick = function(event) {
+        
+        var input = document.getElementById("import-casting-file")
+
+        var data = new FormData()
+        data.append('file', input.files[0])
+        
+        fetch("api/castings", { 
+            body: data, 
+            method: "POST"
+        })
+        .catch((err) => {
+            console.log(err);
+        });
+
+    }
+
+    button.onclick = function(event) {
+        modal.style.display = "none";
+
+        id = document.getElementById("edit-casting-id").value
+    
+        casting = {
+            'name': document.getElementById("edit-casting-name").value,
+            'code': document.getElementById("edit-casting-code").value,
+            'icon': document.getElementById("edit-casting-icon").value
+        }
+        
+        if (id) {
+            casting['id'] = id
+            fetch("api/casting/" + id, { 
+                body: JSON.stringify(casting), 
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+            });
+            
+        } else {
+            fetch("api/casting", { 
+                body: JSON.stringify(casting), 
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+            });
+            
+        }
+    }
+    
+    // Sort columns by selected column
+    document.querySelectorAll(".edit-casting-button").forEach(function(x) {
+        x.addEventListener('click', function(x) {
+            console.log(x)
+            y = x.target.closest('tr');
+            id = y.getAttribute("casting-id");
+            
+            fetch("api/casting/" + id)
+                    .then((res) => res.json())
+                    .then((result) => {
+                        console.log(result)
+                        document.getElementById("edit-casting-id").value = id
+                        document.getElementById("edit-casting-name").value = result.name
+                        document.getElementById("edit-casting-year").value = result.year
+                        document.getElementById("edit-casting-number").value = result.number
+                        document.getElementById("edit-casting-mpn").value = result.mpn
+                        document.getElementById("edit-casting-series").value = result.series
+                        document.getElementById("edit-casting-brand").value = result.brand
+                        document.getElementById("edit-casting-chase").value = result.chase
+                        document.getElementById("edit-casting-store").value = result.store
+                        document.getElementById("edit-casting-assortment").value = result.assortment
+                        document.getElementById("edit-casting-recolor").checked = result.recolor
+                        document.getElementById("edit-casting-color").value = result.color
+                        document.getElementById("edit-casting-image").src = result.image
+                        document.getElementById("edit-casting-icon").src = result.image
+
+                        // Display the modal
+                        modal.style.display = "flex";
+                    })
+                    .catch((err) => {
+                        console.log(err);
+                    });
+            x.preventDefault();
+        })
+    });
+    
+    document.querySelectorAll(".sortable-column").forEach(function(x) {    
+        x.addEventListener('click', function(y) {
+            z = y.target
+            sort_column = y.target.getAttribute('sort_column')
+            sort_order = "{{sort.sort_order}}"
+            sort_order = (sort_order == "asc") ? "desc" : "asc"
+            
+            const url = new URL( window.location.href );
+            url.searchParams.set('sort_column', sort_column);
+            url.searchParams.set('sort_order', sort_order);
+            url.searchParams.set('page_number', 1);
+            window.location.href = url;
+        })
+    });
+    
+      // Sort columns by selected column
+      document.querySelectorAll(".set-page-size").forEach(function(x) {
+          x.addEventListener('click', function(x) {
+            x = x.target
+            var [,,size] = x.id.split('-')
+            if (size != "{{pagination.size}}") {
+              const url = new URL( window.location.href );
+              url.searchParams.set('page_size', size);
+              url.searchParams.set('page_number', 1);
+              window.location.href = url;
+            }
+            x.preventDefault();
+          })
+        });
+    
+    // Apply filters to results
+    document.querySelectorAll(".filter-checkbox").forEach(function(x) {
+      x.addEventListener('change', function() {
+        var filters = {}
+        document.querySelectorAll(".filter-checkbox").forEach(function(y) {
+          var [,name,value] = y.id.split('-')
+          if (!filters[name]) {
+              filters[name] = [];
+          }
+          if (y.checked) {
+            filters[name].push(value);
+          }
+        })
+        const url = new URL( window.location.href );
+        for (const [key, value] of Object.entries(filters)) {
+          url.searchParams.set(key, value.join(','));
+        }   
+        url.searchParams.set('page_number', 1);
+        window.location.href = url;
+        x.preventDefault();
+    });
+  });    
+
+
+});
+
+</script>
+
+<div class="sidebar">
+    <div class="sidebar-wrapper">
+        <div class="sidebar-main-menu">
+          <h1>Filters</h1>
+          <div class="menu">
+            <div class="title">
+              <span class="material-symbols-outlined">calendar_month</span><h3>YEARS</h3>
+            </div>
+            <ul class="list">
+              {% for x in options.years.years %}
+              <li class="item"><div>
+                <input type="checkbox" class="filter-checkbox" name="filter-year-{{x.year}}" id="filter-year-{{x.year}}" {% if x.selected %} checked {% endif %}>
+                <label for="filter-year-{{x.year}}">{{x.year}}</label></div>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+    
+          <div class="menu">
+            <div class="title">
+              <span class="material-symbols-outlined">loyalty</span><h3>BRANDS</h3>
+            </div>
+            <ul class="list">
+              {% for x in options.brands.brands %}
+              <li class="item"><div>
+                <input type="checkbox" class="filter-checkbox" name="filter-brand-{{x.brand.code}}" id="filter-brand-{{x.brand.code}}" {% if x.selected %} checked {% endif %}>
+                <label for="filter-brand-{{x.brand.code}}">{{x.brand.name}}</label></div>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          <div class="menu">
+            <div class="title">
+              <span class="material-symbols-outlined">storefront</span><h3>STORES</h3>
+            </div>
+            <ul class="list">
+              {% for x in options.stores.stores %}
+              <li class="item"><div>
+                <input type="checkbox" class="filter-checkbox" name="filter-store-{{x.store.code}}" id="filter-store-{{x.store.code}}" {% if x.selected %} checked {% endif %}>
+                <label for="filter-store-{{x.store.code}}">{{x.store.name}}</label></div>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          <div class="menu">
+            <div class="title">
+              <span class="material-symbols-outlined">trophy</span><h3>CHASES</h3>
+            </div>
+            <ul class="list">
+              {% for x in options.chases.chases %}
+              <li class="item"><div>
+                <input type="checkbox" class="filter-checkbox" name="filter-chase-{{x.chase.code}}" id="filter-chase-{{x.chase.code}}" {% if x.selected %} checked {% endif %}>
+                <label for="filter-chase-{{x.chase.code}}">{{x.chase.name}}</label></div>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          
+        </div>
+        
+        <div class="menu">
+            <div class="title">
+                <span class="material-symbols-outlined">admin_panel_settings</span>
+                <h3>ADMIN</h3>
+            </div>
+            <ul class="list">
+                <li class="item">
+                    <a href="{{ url_for('store.stores') }}">
+                        <div class="item col">
+                            <span class="material-symbols-outlined">storefront</span>Stores
+                        </div>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="wrapper">
+        <div class="table-header">
+            <h1>Castings</h1>
+            <div id="import-casting-button" class="button" >Import</div>
+            <div id="add-casting-button" class="button" >Add Casting</div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    {% for col in columns  %}
+                        <th style="{% if col.width %}width:{{col.width}};min-width:{{col.width}};{%endif%} {% if col.align%}text-align:{{col.align}};{%endif%}">
+                            {% if col.sortable %}
+                            <div class="sortable-column" sort_column="{{col.name}}">
+                                <svg sort_column="{{col.name}}" class="{% if sort.sort_column != col.name or sort.sort_order == "desc" %}inactive{% endif %}" height="7" width="20">
+                                    <path sort_column="{{col.name}}" fill=currentColor d="M10 0 L0 7 L20 7 Z" />UP</svg>
+                            {%endif%}
+                                    {{col.title}}
+                            {% if col.sortable %}
+                                <svg sort_column="{{col.name}}" class="{% if sort.sort_column != col.name or sort.sort_order == "asc" %}inactive{% endif %}" height="7" width="20">
+                                    <path sort_column="{{col.name}}" fill=currentColor d="M0 0 L10 7 L20 0 Z" />UP</svg>
+                            {%endif%}
+                            {% if col.sortable %}
+                            </div>
+                            {%endif%}
+                            
+                        </th>
+                    {% endfor %}
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for x in castings %}
+                <tr casting-id="{{x.id}}">
+                    {% for col in columns  %}
+                    <td style="{% if col.width%}width:{{col.width}};{%endif%} {% if col.align%}text-align:{{col.align}};{%endif%}">
+                        {% if col.type == 'icon' %}
+                            {% if x[col.name] %}
+                            <div class="tooltip">
+                                <img src="{{url_for('static', filename=x[col.name])}}">
+                                {% if col.tooltip %}
+                                    <span class="tooltiptext">{{ x[col.tooltip] }}</span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            {{ x[col.name] }}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    <td><div class="edit-casting-button"><span class="material-symbols-outlined">edit</span></div></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        
+        <div class="pagination-wrapper">
+            <ul class="pagination">
+                <li class="item"><a href="{{ url_for('casting.index', page_number=1, page_size=pagination.page_size, sort_column=sort.sort_column, sort_order=sort.sort_order, year=options.years.query, chase=options.chases.query, store=options.stores.query, brand=options.brands.query) }}">&lt;&lt;</a></li>
+                <li class="item"><a href="{{ url_for('casting.index', page_number=pagination.prev_page, page_size=pagination.page_size, sort_column=sort.sort_column, sort_order=sort.sort_order, year=options.years.query, chase=options.chases.query, store=options.stores.query, brand=options.brands.query) }}">&lt;</a></li>
+                {% for page in pagination.page_list %}
+                <li class="item {% if page == pagination.curr_page %}current{% endif %}"><a href="{{ url_for('casting.index', page_number=page, page_size=pagination.page_size, sort_column=sort.sort_column, sort_order=sort.sort_order, year=options.years.query, chase=options.chases.query, store=options.stores.query, brand=options.brands.query) }}">{{ page }}</a></li>
+                {% endfor %}
+                <li class="item"><a href="{{ url_for('casting.index', page_number=pagination.next_page, page_size=pagination.page_size, sort_column=sort.sort_column, sort_order=sort.sort_order, year=options.years.query, chase=options.chases.query, store=options.stores.query, brand=options.brands.query) }}">&gt;</a></li>
+                <li class="item"><a href="{{ url_for('casting.index', page_number=pagination.num_pages, page_size=pagination.page_size, sort_column=sort.sort_column, sort_order=sort.sort_order, year=options.years.query, chase=options.chases.query, store=options.stores.query, brand=options.brands.query) }}">&gt;&gt;</a></li>
+            </ul>
+            <span>Showing {{ castings |length }} of <strong> {{ num_castings }} total castings</strong></span>
+    
+            <div>
+                <div class="page-size-container">
+                    <button class="page-size-button">{{ pagination.page_size }}</button>
+                    <div class="page-size-options">
+                        <a class="set-page-size {% if pagination.page_size == 5 %}active{% endif %}" id="page-size-5" href="#">5</a>
+                        {% if num_castings > 5 %}
+                        <a class="set-page-size {% if pagination.page_size == 10 %}active{% endif %}" id="page-size-10" href="#">10</a>
+                        {% endif %}
+                        {% if num_castings > 10 %}
+                        <a class="set-page-size {% if pagination.page_size == 25 %}active{% endif %}" id="page-size-25" href="#">25</a>
+                        {% endif %}
+                    </div>
+                </div>
+                <span>castings per page</span>
+            </div>
+        </div>        
+        
+    </div>
+</div>
+
+
+<!-- The Modal -->
+<div id="edit-casting-modal" class="modal">
+    <div class="modal-dialog-1000">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 id="edit-casting-title">Add/Edit Casting</h1>
+            </div>
+            <div class="modal-body-columns">
+                <input type="hidden" name="edit-casting-id" id="edit-casting-id"/>
+
+                <div class="edit-modal-left-panel">
+                    <div>
+                        <label for="edit-casting-name">Name</label>
+                        <input type="text" name="edit-casting-name" id="edit-casting-name"/>
+                    </div>
+    
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="edit-casting-year">Year</label>
+                            <input type="text" name="edit-casting-year" id="edit-casting-year"/>
+                        </div>
+        
+                        <div class="input-group">
+                            <label for="edit-casting-number">Number</label>
+                            <input type="text" name="edit-casting-number" id="edit-casting-number"/>
+                            </div>
+                    
+                        <div class="input-group">
+                            <label for="edit-casting-mpn">MPN</label>
+                            <input type="text" name="edit-casting-mpn" id="edit-casting-mpn"/>
+                        </div>
+                    </div>
+    
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="edit-casting-assortment">Assortment</label>
+                            <input type="text" name="edit-casting-assortment" id="edit-casting-assortment"/>
+                        </div>
+        
+                        <div class="input-group">
+                            <label for="edit-casting-color">Color</label>
+                            <input type="color" name="edit-casting-color" id="edit-casting-color"/>
+                            </div>
+                    
+                        <div class="input-group">
+                            <label for="edit-casting-recolor">Is Recolor?</label>
+                            <input type="checkbox" name="edit-casting-recolor" id="edit-casting-recolor"/>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="edit-casting-series">Series</label>
+                        <input type="text" name="edit-casting-series" id="edit-casting-series"/>
+                    </div>
+    
+                    <div class="input-row">
+                        <div>
+                            <label for="edit-casting-brand">Brand</label>
+                            <select name="edit-casting-brand" id="edit-casting-brand">
+                                <option></option>
+                                {% for b in options.brands.brands %}
+                                <option value="{{b.brand.code}}">{{b.brand.name}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="edit-casting-chase">Chase</label>
+                            <select name="edit-casting-chase" id="edit-casting-chase">
+                                <option></option>
+                                {% for c in options.chases.chases %}
+                                <option value="{{c.chase.code}}" >{{c.chase.name}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="edit-casting-store">Store</label>
+                            <select name="edit-casting-store" id="edit-casting-store">
+                                <option></option>
+                                {% for x in options.stores.stores %}
+                                <option value="{{x.store.code}}" >{{x.store.name}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>                
+                    <div class="modal-footer">
+                        <input type='button' id="edit-casting-modal-submit" value="Submit">
+                    </div>
+                </div>
+                <div class="edit-modal-right-panel">
+                    <img id="edit-casting-image" src=""></img>
+                    <div class="input-group">
+                        <label for="edit-casting-image-file">Image</label>
+                        <input type="file" name="edit-casting-image-file" id="edit-casting-image-file"/>
+                    </div>
+                    
+                    <div class="input-row">
+                        <img id="edit-casting-icon" src=""></img>
+                        <div class="input-group">
+                            <label for="edit-casting-icon-file">Image</label>
+                            <input type="file" name="edit-casting-icon-file" id="edit-casting-icon-file" onchange="updateEditCastingIcon(this)"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div id="import-casting-modal" class="modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form>
+            <div class="modal-header">
+                <h1 id="import-casting-title">Import Castings</h1>
+            </div>
+            <div class="modal-body">
+                <label for="import-casting-file">Name</label>
+                <input type="file" name="import-casting-file" id="import-casting-file"/>
+            </div>
+            <div class="modal-footer">
+                <input type='button' id="import-casting-modal-submit" value="Submit">
+            </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -8,7 +8,7 @@ from oauthlib.oauth2 import WebApplicationClient
 
 from .user import User
 
-auth = Blueprint('auth', __name__)
+bp = Blueprint('auth', __name__)
 
 # Configuration
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", None)
@@ -20,7 +20,7 @@ GOOGLE_DISCOVERY_URL = (
 # OAuth 2 client setup
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
 
-@auth.route('/login')
+@bp.route('/login')
 def login():
     # Find out what URL to hit for Google login
     google_provider_cfg = get_google_provider_cfg()
@@ -36,7 +36,7 @@ def login():
     return redirect(request_uri)
 
 
-@auth.route("/login/callback")
+@bp.route("/login/callback")
 def callback():
     # Get authorization code Google sent back to you
     code = request.args.get("code")
@@ -92,10 +92,10 @@ def callback():
         login_user(user)
 
     # Send user back to homepage
-    return redirect(url_for("users.list"))
+    return redirect(url_for("casting.index"))
 
 
-@auth.route("/logout")
+@bp.route("/logout")
 @login_required
 def logout():
     logout_user()

@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script>
+
+sort_column = "id"
+sort_order = "asc"
+
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    // Get the modal
+    var modal = document.getElementById("edit-store-modal");
+    var button = document.getElementById("edit-store-modal-submit");
+
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+
+    document.getElementById("add-store-button").onclick = function(event) {
+        
+        document.getElementById("edit-store-id").setAttribute("value", "")
+        document.getElementById("edit-store-code").setAttribute("value", "")
+        document.getElementById("edit-store-name").setAttribute("value", "")
+        document.getElementById("edit-store-icon").setAttribute("value", "")
+        
+        modal.style.display = "flex";
+    }
+
+
+    button.onclick = function(event) {
+        modal.style.display = "none";
+
+        id = document.getElementById("edit-store-id").value
+    
+        store = {
+            'name': document.getElementById("edit-store-name").value,
+            'code': document.getElementById("edit-store-code").value,
+            'icon': document.getElementById("edit-store-icon").value
+        }
+        
+        if (id) {
+            store['id'] = id
+            fetch("api/store/" + id, { 
+                body: JSON.stringify(store), 
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                }
+            });
+            
+        } else {
+            fetch("api/store", { 
+                body: JSON.stringify(store), 
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                }
+            });
+        }
+    }
+    
+    // Sort columns by selected column
+    document.querySelectorAll(".edit-store-icon").forEach(function(x) {
+        x.addEventListener('click', function(x) {
+            console.log(x)
+            y = x.target.closest('tr');
+            id = y.getAttribute("store-id");
+            
+            fetch("api/store/" + id)
+                    .then((res) => res.json())
+                    .then((result) => {
+                        console.log(result)
+                        document.getElementById("edit-store-id").setAttribute("value", id)
+                        document.getElementById("edit-store-code").setAttribute("value", result.code)
+                        document.getElementById("edit-store-name").setAttribute("value", result.name)
+                        document.getElementById("edit-store-icon").setAttribute("value", result.icon)
+
+                        // Display the modal
+                        modal.style.display = "flex";
+                    })
+                    .catch((err) => {
+                        console.log(err);
+                    });
+            x.preventDefault();
+        })
+    });
+    
+    document.querySelectorAll(".sortable-column").forEach(function(x) {    
+        x.addEventListener('click', function(y) {
+            z = y.target
+            sort_column = y.target.getAttribute('sort_column')
+            sort_order = "{{sort.sort_order}}"
+            sort_order = (sort_order == "asc") ? "desc" : "asc"
+            
+            const url = new URL( window.location.href );
+            url.searchParams.set('sort_column', sort_column);
+            url.searchParams.set('sort_order', sort_order);
+            url.searchParams.set('page_number', 1);
+            window.location.href = url;
+        })
+    });
+    
+
+
+});
+
+</script>
+
+<div class="sidebar">
+    <div class="sidebar-wrapper">
+        <div class="sidebar-main-menu">
+            <h1>Filters</h1>
+            <div class="menu">
+            </div>
+        </div>
+
+        <div class="menu">
+            <div class="title">
+                <span class="material-symbols-outlined">admin_panel_settings</span>
+                <h3>ADMIN</h3>
+            </div>
+            <ul class="list">
+                <li class="item">
+                    <a href="{{ url_for('store.stores') }}">
+                        <div class="item col">
+                            <span class="material-symbols-outlined">storefront</span>Stores
+                        </div>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="wrapper">
+        <div class="table-header">
+            <h1>Stores</h1>
+            <div id="add-store-button" class="button" >Add Store</div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    {% for col in ['id', 'code', 'name', 'icon', 'created', 'modified'] %}
+                        <th><div class="sortable-column" sort_column="{{col}}" >{{col|capitalize}}
+                        <span class="sort-icon  {% if sort.column != col %} inactive{% endif %}"> {% if sort.column == col %} {% if sort.order == "asc" %}&#8679;{% elif sort.order == "desc" %}&#8681;{% endif %}{% else %}&#8691;{% endif %}</span></div></th>
+                    {% endfor %}
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for x in stores.list %}
+                <tr store-id="{{x.id}}">
+                    <td>{{ x.id }}</td>
+                    <td>{{ x.code }}</td>
+                    <td>{{ x.name }}</td>
+                    <td><div class="store-icon"><img src="{{ url_for('static', filename=x.icon) }}"><span>{{ x.icon }}</span></div></td>
+                    <td>{{ x.created.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>{{ x.modified.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td><div class="edit-store-icon"><span class="material-symbols-outlined">edit</span></div></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        
+        <div class="pagination-wrapper">
+            <ul class="pagination">
+                <li class="item"><a href="{{ url_for('store.stores', page_number=1, page_size=pagination.page_size) }}">&lt;&lt;</a></li>
+                <li class="item"><a href="{{ url_for('store.stores', page_number=pagination.previous_page, page_size=pagination.page_size) }}">&lt;</a></li>
+                {% for page in pagination.page_list %}
+                <li class="item {% if page == pagination.current_page %}current{% endif %}"><a href="{{ url_for('store.stores', page_number=page, page_size=pagination.page_size) }}">{{ page }}</a></li>
+                {% endfor %}
+                <li class="item"><a href="{{ url_for('store.stores', page_number=pagination.next_page, page_size=pagination.page_size) }}">&gt;</a></li>
+                <li class="item"><a href="{{ url_for('store.stores', page_number=pagination.total_pages, page_size=pagination.page_size) }}">&gt;&gt;</a></li>
+            </ul>
+            <span>Showing {{ stores.list |length }} of <strong> {{ stores.total_count }} total stores</strong></span>
+    
+            <div>
+                <div class="page-size-container">
+                    <button class="page-size-button">{{ pagination.page_size }}</button>
+                    <div class="page-size-options">
+                        <a class="set-page-size {% if pagination.page_size == 5 %}active{% endif %}" id="page-size-5" href="#">5</a>
+                        {% if stores.total_count > 5 %}
+                        <a class="set-page-size {% if pagination.page_size == 10 %}active{% endif %}" id="page-size-10" href="#">10</a>
+                        {% endif %}
+                        {% if stores.total_count > 10 %}
+                        <a class="set-page-size {% if pagination.page_size == 25 %}active{% endif %}" id="page-size-25" href="#">25</a>
+                        {% endif %}
+                    </div>
+                </div>
+                <span>stores per page</span>
+            </div>
+        </div>        
+        
+    </div>
+</div>
+
+
+<!-- The Modal -->
+<div id="edit-store-modal" class="modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 id="edit-store-title">Add/Edit Store</h1>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="edit-store-id" id="edit-store-id"/>
+                
+                <label for="edit-store-name">Name</label>
+                <input type="text" name="edit-store-name" id="edit-store-name"/>
+                
+                <label for="edit-store-code">Code</label>
+                <input type="text" name="edit-store-code" id="edit-store-code"/>
+
+                <label for="edit-store-icon">Icon</label>
+                <input type="text" name="edit-store-icon" id="edit-store-icon"/>
+                
+            </div>
+            <div class="modal-footer">
+                <input type='button' id="edit-store-modal-submit" value="Submit">
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
